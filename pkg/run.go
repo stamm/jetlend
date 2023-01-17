@@ -1,28 +1,29 @@
+//go:build go1.20
+
 package pkg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"net/http"
-	"os"
 	"time"
 
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 )
 
 const (
-	target  = 0.005
+	target  = 0.003
 	okCode  = 200
 	percent = 100
-	timeout = 5 * time.Second
+	timeout = 10 * time.Second
 )
 
-func Run() {
+var ErrGetJson = errors.New("can't get json")
+
+func Run(ctx context.Context, sid string, terminal bool) (string, error) {
 	log.Println("Start")
 	var (
 		rep Report
@@ -30,66 +31,66 @@ func Run() {
 	)
 
 	g.Go(func() error {
-		body, err := getJson("portfolio/distribution")
+		body, err := getJson(ctx, http.DefaultClient, JetUrl("portfolio/distribution"), sid)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w for portfolio/distribution (1): %w", ErrGetJson, err)
 		}
 
 		rep.Sum, rep.Values, err = extractLoans(body)
 		if err != nil {
-			return err
+			return fmt.Errorf("couldn't extract loans for portfolio/distribution (1): %w", err)
 		}
 
 		return nil
 	})
 
 	g.Go(func() error {
-		body, err := getJson("portfolio/analytics")
+		body, err := getJson(ctx, http.DefaultClient, JetUrl("portfolio/analytics"), sid)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w for portfolio/analytics (2): %w", ErrGetJson, err)
 		}
 		rep.Delayed, err = extractDelayed(body)
 		if err != nil {
-			return err
+			return fmt.Errorf("couldn't extract delayed for portfolio/analytics (2): %w", err)
 		}
 
 		return nil
 	})
 
 	g.Go(func() error {
-		body, err := getJson("account/details")
+		body, err := getJson(ctx, http.DefaultClient, JetUrl("account/details"), sid)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w for account/details (3): %w", ErrGetJson, err)
 		}
-		rep.Reserved, err = extractReserved(body)
+		rep.Reserved, rep.Free, err = extractBalance(body)
 		if err != nil {
-			return err
+			return fmt.Errorf("couldn't extract balance for account/details (3): %w", err)
 		}
 
 		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		panic(err)
+		return "", err
 	}
 
-	pr(rep)
+	return pr(rep, terminal), nil
 }
 
-func getJson(uri string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+func getJson(ctx context.Context, client *http.Client, url, sid string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://jetlend.ru/invest/api/"+uri, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return []byte{}, fmt.Errorf("couldnt create request for uri %s: %w", uri, err)
+		return []byte{}, fmt.Errorf("couldn't create request for url %s: %w", url, err)
 	}
 
-	req.Header.Set("Cookie", os.Getenv("JETLEND_COOKIE"))
+	req.Header.Set("Cookie", "sessionid="+sid)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
-		return []byte{}, fmt.Errorf("couldnt do request for uri %s: %w", uri, err)
+		return []byte{}, fmt.Errorf("couldn't do request for url %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -100,29 +101,6 @@ func getJson(uri string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func pr(rep Report) {
-	p := message.NewPrinter(language.Russian)
-	l := float64(len(rep.Values))
-	fmt.Printf("sum = %s, len = %0.0f, %0.2f%%\ndelayed = %s (%0.1f%%)\nreserved = %s (%0.1f%%)\n",
-		p.Sprintf("%0.f", rep.Sum), l, 100./float64(l),
-		p.Sprintf("%0.f", rep.Delayed), rep.Delayed/rep.Sum*percent,
-		p.Sprintf("%0.f", rep.Reserved), rep.Reserved/rep.Sum*percent)
-
-	// for _, q := range []int{50, 75, 90, 95, 96, 97, 98, 99, 100} {
-	for _, q := range []float64{50, 75, 90, 95, 99, 100} {
-		c := int(math.Round(l * q / percent))
-		if c >= int(l) {
-			c = int(l) - 1
-		}
-		proc := rep.Values[c] / rep.Sum
-
-		fmt.Printf("%3.0fq c=%d(%3d)  %s  %0.2f%%",
-			q, c+1, int(l)-c, p.Sprintf("%6.f", rep.Values[c]), proc*100.0)
-
-		if proc > target {
-			fmt.Print("\033[31m")
-			fmt.Printf(" > %0.1f%%", target*100)
-		}
-		fmt.Print("\033[0m\n")
-	}
+func JetUrl(uri string) string {
+	return "https://jetlend.ru/invest/api/" + uri
 }

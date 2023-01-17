@@ -24,6 +24,7 @@ type DataDet struct {
 }
 type Balance struct {
 	Reserved float64 `json:"reserved"`
+	Free     float64 `json:"free"`
 }
 
 type Report struct {
@@ -31,4 +32,5 @@ type Report struct {
 	Values   []float64
 	Delayed  float64
 	Reserved float64
+	Free     float64
 }
