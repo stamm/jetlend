@@ -4,7 +4,9 @@ type Distr struct {
 	Data []Data `json:"data"`
 }
 type Data struct {
-	Debt float64 `json:"principal_debt"`
+	Debt    float64 `json:"principal_debt"`
+	LoadID  uint    `json:"loan_id"`
+	Company string  `json:"company"`
 }
 
 type Analytics struct {

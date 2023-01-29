@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 var ErrUnmarshal = errors.New("can't unmarshal")
@@ -19,10 +20,26 @@ func extractLoans(body []byte) (float64, []float64, error) {
 	}
 
 	sum := float64(0)
+	comp := make(map[string]float64, len(distr.Data))
 	values := make([]float64, 0, len(distr.Data))
+	count := make(map[string]int)
 	for _, d := range distr.Data {
-		values = append(values, d.Debt)
-		sum += d.Debt
+		spl := strings.SplitN(d.Company, "-В", 2)
+		com := spl[0]
+		if comp[com] != 0 {
+			// 	log.Printf("spl[0] = %+v\n", spl[0])
+			if _, ok := count[com]; !ok {
+				count[com] = 2
+			} else {
+				count[com]++
+			}
+		}
+		comp[com] += d.Debt
+	}
+	// log.Printf("count = %+v\n", count)
+	for _, v := range comp {
+		values = append(values, v)
+		sum += v
 	}
 	sort.Float64s(values)
 	return sum, values, nil
