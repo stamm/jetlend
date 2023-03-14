@@ -6,11 +6,12 @@ To run you need:
 
 
 `make run` - print all stats with quantiles
-`make expect` - print expected cashflow (default 7 days, can tuned with env JETLEND_DAYS)
+
+`make expect` - print expected cashflow (default 7 days, can tuned with env `JETLEND_DAYS`)
 
 
-Also you can setup a telegram bot, in this case you need a server. Bot will daily send stat to your TG_USER_ID
-Set up a systemd.unit in /etc/systemd/system/jetlend-bot.service:
+Also you can setup a telegram bot, in this case you need a server. Bot will daily send stat to your `TG_USER_ID`
+Set up a systemd unit in `/etc/systemd/system/jetlend-bot.service`:
 ```
 [Unit]
 Description=Jetlend bot
@@ -22,10 +23,17 @@ ExecStart=/root/jetlend_bot
 WantedBy=multi-user.target
 ```
 
-Set tokens and cookies (/etc/systemd/system/jetlend-bot.service.d/10-env.conf):
+Set tokens and cookies `/etc/systemd/system/jetlend-bot.service.d/10-env.conf`:
 ```
 [Service]
 Environment=JETLEND_CFG="{TG_USER_ID}={COOKIE}"
 Environment="TELEGRAM_APITOKEN={TOKEN}"
 ```
 
+Start the unit:
+`systemctl daemon-reload && systemctl restart jetlend-bot.service`
+
+In case of debug, you can setup schedule sending:
+```
+Environment=JETLEND_SCHEDULE="04 8 * * *"
+```
