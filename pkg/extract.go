@@ -6,22 +6,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 )
 
 var ErrUnmarshal = errors.New("can't unmarshal")
 
-func extractLoans(body []byte) (float64, []float64, error) {
+func extractExpect(body []byte) (Expect, error) {
+	var expect Expect
+	err := json.Unmarshal(body, &expect)
+	if err != nil {
+		return Expect{}, fmt.Errorf("%w expect: %w", ErrUnmarshal, err)
+	}
+	return expect, nil
+}
+
+func extractLoans(body []byte) (float64, map[string]float64, error) {
 	var distr Distr
 	err := json.Unmarshal(body, &distr)
 	if err != nil {
-		return 0., []float64{}, fmt.Errorf("%w loans: %w", ErrUnmarshal, err)
+		return 0., map[string]float64{}, fmt.Errorf("%w loans: %w", ErrUnmarshal, err)
 	}
 
 	sum := float64(0)
 	comp := make(map[string]float64, len(distr.Data))
-	values := make([]float64, 0, len(distr.Data))
 	count := make(map[string]int)
 	for _, d := range distr.Data {
 		spl := strings.SplitN(d.Company, "-В", 2)
@@ -38,11 +45,9 @@ func extractLoans(body []byte) (float64, []float64, error) {
 	}
 	// log.Printf("count = %+v\n", count)
 	for _, v := range comp {
-		values = append(values, v)
 		sum += v
 	}
-	sort.Float64s(values)
-	return sum, values, nil
+	return sum, comp, nil
 }
 
 func extractDelayed(body []byte) (float64, error) {

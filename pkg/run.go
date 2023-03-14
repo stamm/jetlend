@@ -15,69 +15,154 @@ import (
 )
 
 const (
-	target  = 0.003
-	okCode  = 200
-	percent = 100
-	timeout = 10 * time.Second
+	// target    = 0.0027
+	target    = 0.003
+	minTarget = 0.002
+	okCode    = 200
+	percent   = 100
+	timeout   = 10 * time.Second
 )
 
-var ErrGetJson = errors.New("can't get json")
+// ErrGetJSON is an error getting json
+var ErrGetJSON = errors.New("can't get json")
 
-func Run(ctx context.Context, sid string, terminal bool) (string, error) {
+// ExpectAmount show returns for loans
+func ExpectAmount(ctx context.Context, sids []string, terminal bool, days int) (string, error) {
+	body, err := getJSON(ctx, http.DefaultClient, jetURL(fmt.Sprintf("portfolio/charts/expected_revenue?size=%d", days)), sids[0])
+	if err != nil {
+		return "", fmt.Errorf("%w for portfolio/charts/expected_revenue: %w", ErrGetJSON, err)
+	}
+	exp, err := extractExpect(body)
+	if err != nil {
+		return "", fmt.Errorf("for extract: %w", err)
+	}
+	return prExpect(exp, terminal), nil
+}
+
+func loans(ctx context.Context, rep *Report, sids []string) error {
+	var g errgroup.Group
+	for _, sid := range sids {
+		sid := sid
+		g.Go(func() error {
+			body, err := getJSON(ctx, http.DefaultClient, jetURL("portfolio/distribution"), sid)
+			if err != nil {
+				return fmt.Errorf("%w for portfolio/distribution (1): %w", ErrGetJSON, err)
+			}
+
+			sum, values, err2 := extractLoans(body)
+			if err2 != nil {
+				return fmt.Errorf("couldn't extract loans for portfolio/distribution (1): %w", err)
+			}
+
+			rep.Mu.Lock()
+			rep.Sum += sum
+			for k, v := range values {
+				if _, ok := rep.Values[k]; ok {
+					rep.Values[k] += v
+				} else {
+					rep.Values[k] = v
+				}
+			}
+			rep.Mu.Unlock()
+
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("get error for loans: %s", err)
+	}
+	return nil
+}
+
+func delayed(ctx context.Context, rep *Report, sids []string) error {
+	var g errgroup.Group
+	for _, sid := range sids {
+		sid := sid
+		g.Go(func() error {
+			body, err := getJSON(ctx, http.DefaultClient, jetURL("portfolio/analytics"), sid)
+			if err != nil {
+				return fmt.Errorf("%w for portfolio/analytics (2): %w", ErrGetJSON, err)
+			}
+
+			delayed, err2 := extractDelayed(body)
+			if err2 != nil {
+				return fmt.Errorf("couldn't extract delayed for portfolio/analytics (2): %w", err)
+			}
+
+			rep.Mu.Lock()
+			// log.Printf("delayed: %.0f\n", delayed)
+			rep.Delayed += delayed
+			rep.Mu.Unlock()
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("get error for delayed: %s", err)
+	}
+	return nil
+}
+
+func balance(ctx context.Context, rep *Report, sids []string) error {
+	var g errgroup.Group
+	for _, sid := range sids {
+		sid := sid
+		g.Go(func() error {
+			body, err := getJSON(ctx, http.DefaultClient, jetURL("account/details"), sid)
+			if err != nil {
+				return fmt.Errorf("%w for account/details (3): %w", ErrGetJSON, err)
+			}
+
+			reserved, free, err2 := extractBalance(body)
+			if err2 != nil {
+				return fmt.Errorf("couldn't extract balance for account/details (3): %w", err)
+			}
+
+			rep.Mu.Lock()
+			rep.Reserved += reserved
+			rep.Free += free
+			rep.Mu.Unlock()
+
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("get error for balance: %s", err)
+	}
+
+	return nil
+}
+
+// Run make stats
+func Run(ctx context.Context, sids []string, terminal bool) (string, error) {
 	log.Println("Start")
 	var (
 		rep Report
 		g   errgroup.Group
 	)
+	rep.Values = make(map[string]float64, 0)
 
 	g.Go(func() error {
-		body, err := getJson(ctx, http.DefaultClient, JetUrl("portfolio/distribution"), sid)
-		if err != nil {
-			return fmt.Errorf("%w for portfolio/distribution (1): %w", ErrGetJson, err)
-		}
-
-		rep.Sum, rep.Values, err = extractLoans(body)
-		if err != nil {
-			return fmt.Errorf("couldn't extract loans for portfolio/distribution (1): %w", err)
-		}
-
-		return nil
+		return loans(ctx, &rep, sids)
 	})
 
 	g.Go(func() error {
-		body, err := getJson(ctx, http.DefaultClient, JetUrl("portfolio/analytics"), sid)
-		if err != nil {
-			return fmt.Errorf("%w for portfolio/analytics (2): %w", ErrGetJson, err)
-		}
-		rep.Delayed, err = extractDelayed(body)
-		if err != nil {
-			return fmt.Errorf("couldn't extract delayed for portfolio/analytics (2): %w", err)
-		}
-
-		return nil
+		return delayed(ctx, &rep, sids)
 	})
 
 	g.Go(func() error {
-		body, err := getJson(ctx, http.DefaultClient, JetUrl("account/details"), sid)
-		if err != nil {
-			return fmt.Errorf("%w for account/details (3): %w", ErrGetJson, err)
-		}
-		rep.Reserved, rep.Free, err = extractBalance(body)
-		if err != nil {
-			return fmt.Errorf("couldn't extract balance for account/details (3): %w", err)
-		}
-
-		return nil
+		return balance(ctx, &rep, sids)
 	})
 
 	if err := g.Wait(); err != nil {
 		return "", err
 	}
 
-	return pr(rep, terminal), nil
+	return pr(&rep, terminal), nil
 }
 
-func getJson(ctx context.Context, client *http.Client, url, sid string) ([]byte, error) {
+func getJSON(ctx context.Context, client *http.Client, url, sid string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -101,6 +186,6 @@ func getJson(ctx context.Context, client *http.Client, url, sid string) ([]byte,
 	return io.ReadAll(resp.Body)
 }
 
-func JetUrl(uri string) string {
+func jetURL(uri string) string {
 	return "https://jetlend.ru/invest/api/" + uri
 }

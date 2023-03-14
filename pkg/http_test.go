@@ -19,7 +19,7 @@ func TestHttpClientOK(t *testing.T) {
 	}))
 	defer svr.Close()
 	client := &http.Client{}
-	data, err := getJson(context.TODO(), client, svr.URL)
+	data, err := getJSON(context.TODO(), client, svr.URL, "")
 	assert.Nil(err)
 	assert.Equal([]byte(expected), data)
 }
@@ -33,13 +33,13 @@ func TestHttpClientCode(t *testing.T) {
 	}))
 	defer svr.Close()
 	client := &http.Client{}
-	data, err := getJson(context.TODO(), client, svr.URL)
+	data, err := getJSON(context.TODO(), client, svr.URL, "")
 	assert.Error(err)
 	assert.Equal([]byte{}, data)
 }
 
 func TestJetUrl(t *testing.T) {
 	assert := assert.New(t)
-	data := JetUrl("test")
+	data := jetURL("test")
 	assert.Equal("https://jetlend.ru/invest/api/test", data)
 }

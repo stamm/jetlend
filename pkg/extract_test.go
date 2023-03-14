@@ -14,7 +14,7 @@ func TestExtractLoans(t *testing.T) {
 	sum, values, err := extractLoans(d)
 	assert.Nil(err)
 	assert.Equal(5447.18, sum)
-	assert.Equal([]float64{1347.18, 4100.0}, values)
+	assert.Equal(map[string]float64{"БеляевВА": 4100.0, "ПЛАТОН": 1347.18}, values)
 }
 
 func TestExtractLoansWrong(t *testing.T) {

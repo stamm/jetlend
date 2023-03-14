@@ -1,5 +1,7 @@
 package pkg
 
+import "sync"
+
 type Distr struct {
 	Data []Data `json:"data"`
 }
@@ -31,8 +33,17 @@ type Balance struct {
 
 type Report struct {
 	Sum      float64
-	Values   []float64
+	Values   map[string]float64
 	Delayed  float64
 	Reserved float64
 	Free     float64
+	Mu       sync.Mutex
+}
+
+type Expect struct {
+	Data []ExpectData `json:"data"`
+}
+type ExpectData struct {
+	Date   int64   `json:"date"`
+	Amount float64 `json:"amount"`
 }
