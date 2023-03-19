@@ -9,12 +9,12 @@ import (
 func TestExtractLoans(t *testing.T) {
 	assert := assert.New(t)
 	d := []byte(`
-{"status":"OK","data":[{"company":"ПЛАТОН-В01","principal_debt":1347.18,"loan_id":1450,"amount":5226,"status":"delayed"},{"company":"БеляевВА-В04","principal_debt":4100.0,"loan_id":12079,"amount":4100,"status":"active"}]}
+{"status":"OK","data":[{"company":"ПЛАТОН-В01","principal_debt":1347.00,"loan_id":1450,"amount":5226,"status":"delayed"},{"company":"БеляевВА-В04","principal_debt":4100.0,"loan_id":12079,"amount":4100,"status":"active"},{"company":"ПЛАТОН-В02","principal_debt":1000,"loan_id":1650,"amount":1000,"status":"active"},{"company":"ПЛАТОН-В03","principal_debt":1000,"loan_id":1650,"amount":1000,"status":"active"}]}
 `)
 	sum, values, err := extractLoans(d)
 	assert.Nil(err)
-	assert.Equal(5447.18, sum)
-	assert.Equal(map[string]float64{"БеляевВА": 4100.0, "ПЛАТОН": 1347.18}, values)
+	assert.Equal(7447.0, sum)
+	assert.Equal(map[string]float64{"БеляевВА": 4100.0, "ПЛАТОН": 3347.00}, values)
 }
 
 func TestExtractLoansWrong(t *testing.T) {
@@ -94,4 +94,24 @@ func TestExtractBalanceWithoutStatus(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(.0, reserved)
 	assert.Equal(.0, free)
+}
+
+func TestExtractExpect(t *testing.T) {
+	assert := assert.New(t)
+	d := []byte(`
+{"status":"OK","data":[{"idx":0,"date":1678752000000,"amount":100.0,"principal":0.0,"revenue":0.0}]}
+`)
+	expect, err := extractExpect(d)
+	assert.Nil(err)
+	assert.Equal([]ExpectData{{Date: 1678752000000, Amount: 100}}, expect.Data)
+}
+
+func TestExtractExpectWrong(t *testing.T) {
+	assert := assert.New(t)
+	d := []byte(`
+{"stat
+`)
+	expect, err := extractExpect(d)
+	assert.ErrorIs(err, ErrUnmarshal)
+	assert.Nil(expect.Data)
 }

@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"strings"
@@ -9,6 +10,12 @@ import (
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
+)
+
+const (
+	minPercent = 0.2
+	// maxInvest  = 6_000
+	maxInvest = 0
 )
 
 func pr(rep *Report, terminal bool) string {
@@ -79,12 +86,63 @@ func pr(rep *Report, terminal bool) string {
 				sb.WriteString("\033[31m")
 			}
 			sb.WriteString(fmt.Sprintf(" > %0.1f%%", target*100))
+			// } else if proc >= minTarget+0.0001 {
+			// 	if terminal {
+			// 		sb.WriteString("\033[31m")
+			// 	}
+			// 	sb.WriteString(fmt.Sprintf(" > %0.1f%%", minTarget*100))
 		}
 		if terminal {
 			sb.WriteString("\033[0m")
 		}
 		sb.WriteString("\n")
 	}
+	sort.Slice(rep.Requests, func(i, j int) bool {
+		return rep.Requests[i].InterestRate > rep.Requests[j].InterestRate
+	})
+	max := maxInvest
+	if max == 0 {
+		max = int(rep.Sum * minTarget)
+	}
+	sb.WriteString(fmt.Sprintf("max invest sum: %s\n",
+		p.Sprintf("%d", max)))
+
+	for _, req := range rep.Requests {
+		if req.InterestRate < minPercent {
+			continue
+		}
+		comp := companyNorm(req.LoanName)
+
+		sum := 0.
+		if v, ok := rep.Values[comp]; ok {
+			sum += v
+		}
+		sum += req.InvestingAmount.Float64
+		if comp == "СИМБИОЗ" {
+			log.Printf("comp %s, req: %+v", comp, req)
+		}
+		s := ""
+
+		if int(sum) < max {
+			if terminal {
+				sb.WriteString("\033[32m")
+			}
+			s = "need to buy"
+		} else if int(sum) > max {
+			if terminal {
+				sb.WriteString("\033[31m")
+			}
+			s = "need to sell"
+		}
+		if s != "" {
+			sb.WriteString(fmt.Sprintf("%s (%2.1f%%) %s %s: %02.0f%%/%1.1f\n",
+				comp, req.InterestRate*100, s, p.Sprintf("%d", max-int(sum)), req.CollectedPercentage, req.Amount.Float64/1_000_000))
+		}
+	}
+	if terminal {
+		sb.WriteString("\033[0m")
+	}
+
 	if !terminal {
 		sb.WriteString("```\n")
 		// sb.WriteString("</pre>\n")
@@ -102,7 +160,7 @@ func prExpect(exp Expect, terminal bool) string {
 	sum := 0.
 	for _, d := range exp.Data {
 		sum += d.Amount
-		tm := time.Unix(d.Date/1000, 0)
+		tm := time.Unix(d.Date/1_000, 0)
 		sb.WriteString(fmt.Sprintf("%02d: %s\n", tm.Day(),
 			p.Sprintf("%7.f", d.Amount)))
 	}

@@ -51,7 +51,7 @@ func loans(ctx context.Context, rep *Report, sids []string) error {
 
 			sum, values, err2 := extractLoans(body)
 			if err2 != nil {
-				return fmt.Errorf("couldn't extract loans for portfolio/distribution (1): %w", err)
+				return fmt.Errorf("couldn't extract loans for portfolio/distribution (1): %w", err2)
 			}
 
 			rep.Mu.Lock()
@@ -86,7 +86,7 @@ func delayed(ctx context.Context, rep *Report, sids []string) error {
 
 			delayed, err2 := extractDelayed(body)
 			if err2 != nil {
-				return fmt.Errorf("couldn't extract delayed for portfolio/analytics (2): %w", err)
+				return fmt.Errorf("couldn't extract delayed for portfolio/analytics (2): %w", err2)
 			}
 
 			rep.Mu.Lock()
@@ -116,7 +116,7 @@ func balance(ctx context.Context, rep *Report, sids []string) error {
 
 			reserved, free, err2 := extractBalance(body)
 			if err2 != nil {
-				return fmt.Errorf("couldn't extract balance for account/details (3): %w", err)
+				return fmt.Errorf("couldn't extract balance for account/details (3): %w", err2)
 			}
 
 			rep.Mu.Lock()
@@ -130,6 +130,24 @@ func balance(ctx context.Context, rep *Report, sids []string) error {
 	if err := g.Wait(); err != nil {
 		return fmt.Errorf("get error for balance: %s", err)
 	}
+
+	return nil
+}
+
+func requests(ctx context.Context, rep *Report, sid string) error {
+	body, err := getJSON(ctx, http.DefaultClient, jetURL("requests/waiting"), sid)
+	if err != nil {
+		return fmt.Errorf("%w for requests/waiting: %w", ErrGetJSON, err)
+	}
+
+	requests, err2 := extractRequests(body)
+	if err2 != nil {
+		return fmt.Errorf("couldn't extract requests for requests/waiting: %w", err2)
+	}
+
+	rep.Mu.Lock()
+	rep.Requests = requests
+	rep.Mu.Unlock()
 
 	return nil
 }
@@ -153,6 +171,10 @@ func Run(ctx context.Context, sids []string, terminal bool) (string, error) {
 
 	g.Go(func() error {
 		return balance(ctx, &rep, sids)
+	})
+
+	g.Go(func() error {
+		return requests(ctx, &rep, sids[1])
 	})
 
 	if err := g.Wait(); err != nil {
