@@ -2,9 +2,10 @@ package pkg
 
 import (
 	"fmt"
-	"log"
 	"math"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,7 +101,11 @@ func pr(rep *Report, terminal bool) string {
 	sort.Slice(rep.Requests, func(i, j int) bool {
 		return rep.Requests[i].InterestRate > rep.Requests[j].InterestRate
 	})
-	max := maxInvest
+	maxStr, _ := os.LookupEnv("JETLEND_MAX")
+	max, err := strconv.Atoi(maxStr)
+	if err != nil {
+		panic(err)
+	}
 	if max == 0 {
 		max = int(rep.Sum * minTarget)
 	}
@@ -118,10 +123,14 @@ func pr(rep *Report, terminal bool) string {
 			sum += v
 		}
 		sum += req.InvestingAmount.Float64
-		if comp == "СИМБИОЗ" {
-			log.Printf("comp %s, req: %+v", comp, req)
-		}
+		// if comp == "СИМБИОЗ" {
+		// 	log.Printf("comp %s, req: %+v", comp, req)
+		// }
 		s := ""
+
+		if math.Abs(float64(max)-sum) < 100 {
+			continue
+		}
 
 		if int(sum) < max {
 			if terminal {
