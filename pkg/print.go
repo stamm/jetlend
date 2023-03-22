@@ -101,7 +101,10 @@ func pr(rep *Report, terminal bool) string {
 	sort.Slice(rep.Requests, func(i, j int) bool {
 		return rep.Requests[i].InterestRate > rep.Requests[j].InterestRate
 	})
-	maxStr, _ := os.LookupEnv("JETLEND_MAX")
+	maxStr, ok := os.LookupEnv("JETLEND_MAX")
+	if !ok {
+		maxStr = "0"
+	}
 	max, err := strconv.Atoi(maxStr)
 	if err != nil {
 		panic(err)
