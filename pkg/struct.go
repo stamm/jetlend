@@ -69,6 +69,8 @@ type Request struct {
 	InvestingAmount     CustomFloat64 `json:"investing_amount"`
 	Rating              string        `json:"rating"`
 	LoanName            string        `json:"loan_name"`
+	Company             string        `json:"company"`
+	Term                int           `json:"term"`
 }
 
 type CustomFloat64 struct {

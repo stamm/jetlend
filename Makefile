@@ -5,6 +5,8 @@ run:
 	go run -race cmd/cli/main.go -m ${MODE}
 expect:
 	go run -race cmd/cli/main.go -m expect
+csv:
+	go run -race cmd/csv/main.go > intelinvest_test1.csv
 
 .PHONY: bot
 bot:

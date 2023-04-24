@@ -9,6 +9,8 @@ To run you need:
 
 `make expect` - print expected cashflow (default 7 days, can tuned with env `JETLEND_DAYS`)
 
+`make csv` - export transaction to IntelInvest's format. Need to [download all transaction](https://jetlend.ru/invest/v3/notifications), convert from xslx to csv (file transactions-2.csv)
+
 
 Also you can setup a telegram bot, in this case you need a server. Bot will daily send stat to your `TG_USER_ID`
 Set up a systemd unit in `/etc/systemd/system/jetlend-bot.service`:

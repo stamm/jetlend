@@ -16,8 +16,8 @@ import (
 
 const (
 	// target    = 0.0027
-	target    = 0.003
-	minTarget = 0.002
+	minTarget = 0.00205
+	maxTarget = 0.003
 	okCode    = 200
 	percent   = 100
 	timeout   = 10 * time.Second

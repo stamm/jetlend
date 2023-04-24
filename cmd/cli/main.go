@@ -13,6 +13,8 @@ import (
 
 func main() {
 	ctx := context.Background()
+	// ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	// defer stop()
 	cookies := strings.Split(os.Getenv("JETLEND_COOKIE"), ",")
 	d, ok := os.LookupEnv("JETLEND_DAYS")
 	if !ok {
@@ -40,6 +42,6 @@ func main() {
 		}
 		fmt.Print(msg)
 	}
-
-	return
+	// stop()
+	// fmt.Printf("ctx done: %s", <-ctx.Done())
 }
