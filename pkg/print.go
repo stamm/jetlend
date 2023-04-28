@@ -118,7 +118,7 @@ func pr(rep *Report, terminal bool) string {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(&sb)
-	t.AppendHeader(table.Row{"!", "Company", "Percent", "Action", "Sum", "Collected", "Total", "Days", "Rating"})
+	t.AppendHeader(table.Row{"!", "Buy", "Company", "Percent", "Action", "Sum", "Collected", "Total", "Days", "Rating"})
 	for _, req := range rep.Requests {
 		if req.InterestRate < minPercent {
 			continue
@@ -151,6 +151,14 @@ func pr(rep *Report, terminal bool) string {
 			s = "sell"
 		}
 		expl := ""
+		can := max - int(sum)
+		buy := .0
+		if can > 0 {
+			if req.Term >= 390 {
+				buy = math.Min(float64(can), float64(max/2))
+			}
+
+		}
 		if max-int(sum) > int(0.75*float64(max)) &&
 			req.Term < 390 &&
 			req.CollectedPercentage < 100 &&
@@ -163,7 +171,7 @@ func pr(rep *Report, terminal bool) string {
 		}
 		if s != "" {
 			t.AppendRows([]table.Row{
-				{expl, comp, fmt.Sprintf("%2.1f%%", req.InterestRate*100), s, max - int(sum),
+				{expl, buy, comp, fmt.Sprintf("%2.1f%%", req.InterestRate*100), s, max - int(sum),
 					int(req.CollectedPercentage),
 					fmt.Sprintf("%1.1f", req.Amount.Float64/1_000_000),
 					fmt.Sprintf("%d", req.Term),
