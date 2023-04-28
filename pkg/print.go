@@ -116,6 +116,10 @@ func pr(rep *Report, terminal bool) string {
 	}
 	sb.WriteString(fmt.Sprintf("max invest sum: %s\n",
 		p.Sprintf("%d", max)))
+	sb.WriteString(`✓ already have enough sum
+- need to cancel reserved
+| more than 60% collected
+`)
 
 	t := table.NewWriter()
 	t.SetOutputMirror(&sb)
@@ -164,7 +168,10 @@ func pr(rep *Report, terminal bool) string {
 			expl = "!"
 		}
 		if max-int(sum) < int(0.5*float64(max)) {
-			expl = "-"
+			expl = "✓"
+			if req.InvestingAmount.Float64 > 0 {
+				expl = "–"
+			}
 		}
 		if buy > 0 && req.CollectedPercentage > 60 && req.CollectedPercentage < 100 {
 			expl += "|"
