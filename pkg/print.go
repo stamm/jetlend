@@ -102,6 +102,7 @@ func pr(rep *Report, terminal bool) string {
 	sort.Slice(rep.Requests, func(i, j int) bool {
 		return rep.Requests[i].InterestRate > rep.Requests[j].InterestRate
 	})
+
 	maxStr, ok := os.LookupEnv("JETLEND_MAX")
 	if !ok {
 		maxStr = "0"
@@ -118,9 +119,12 @@ func pr(rep *Report, terminal bool) string {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(&sb)
-	t.AppendHeader(table.Row{"!", "Company", "Percent", "Action", "Sum", "Collected", "Total", "Days", "Rating"})
+	t.AppendHeader(table.Row{"!", "Buy", "Reserved", "Company", "Percent", "Action", "Sum", "Collected", "Total", "Days", "Rating"})
 	for _, req := range rep.Requests {
 		if req.InterestRate < minPercent {
+			continue
+		}
+		if req.CollectedPercentage >= 100 {
 			continue
 		}
 		comp := companyNorm(req.LoanName)
@@ -150,6 +154,7 @@ func pr(rep *Report, terminal bool) string {
 			// }
 			s = "sell"
 		}
+		buy := round(muchBuy(req, float64(max), sum))
 		expl := ""
 		if max-int(sum) > int(0.75*float64(max)) &&
 			req.Term < 390 &&
@@ -161,9 +166,12 @@ func pr(rep *Report, terminal bool) string {
 		if max-int(sum) < int(0.5*float64(max)) {
 			expl = "-"
 		}
+		if buy > 0 && req.CollectedPercentage > 60 && req.CollectedPercentage < 100 {
+			expl += "|"
+		}
 		if s != "" {
 			t.AppendRows([]table.Row{
-				{expl, comp, fmt.Sprintf("%2.1f%%", req.InterestRate*100), s, max - int(sum),
+				{expl, buy, req.InvestingAmount.Float64, comp, fmt.Sprintf("%2.1f%%", req.InterestRate*100), s, int(sum),
 					int(req.CollectedPercentage),
 					fmt.Sprintf("%1.1f", req.Amount.Float64/1_000_000),
 					fmt.Sprintf("%d", req.Term),
@@ -218,4 +226,36 @@ func index(values map[string]float64) float64 {
 		s += v / sum * v / sum
 	}
 	return s
+}
+
+func muchBuy(req Request, max, sum float64) float64 {
+	can := max - sum
+	buy := 0.
+	// if invested + reserved more than max sum
+	// or already collected
+	if can <= 0 || req.CollectedPercentage >= 100 {
+		return .0
+	}
+
+	// if more than a year
+	if req.Term >= 390 {
+		// if sum < 1/4 of max (1500)
+		if sum < float64(max/4) {
+			buy = math.Min(float64(can), float64(max/4))
+		}
+		return buy
+	}
+
+	// if sum < 1/2 of max (3000)
+	if sum < float64(max/2) {
+		buy = float64(max/2) - sum
+	}
+	return buy
+}
+
+func round(buy float64) int {
+	if int(buy)%100 > 0 {
+		return int(buy) - int(buy)%100
+	}
+	return int(buy)
 }

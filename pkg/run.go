@@ -16,7 +16,7 @@ import (
 
 const (
 	// target    = 0.0027
-	minTarget = 0.00205
+	minTarget = 0.00206
 	maxTarget = 0.003
 	okCode    = 200
 	percent   = 100
