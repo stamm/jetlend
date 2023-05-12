@@ -43,15 +43,18 @@ func pr(rep *Report, terminal bool) string {
 		p.Sprintf("%0.f", rep.Free), rep.Free/sum*percent,
 		index(rep.Values)*100, math.Sqrt(l*0.02*(1-0.02)), math.Sqrt(0.02*(1-0.02)/l)))
 
-	// sumTarg := sum*target - 500
-	sumTarg := rep.Sum * maxTarget
+	// maxTarget := sum*target - 500
+	// maxTarget := rep.Sum * maxTargetPercent
+	maxTarget := maxTargetSum
 	count := 0
 	keys := make([]string, 0, len(rep.Values))
 	for key, v := range rep.Values {
-		if v >= sum*minTarget && v <= sumTarg {
+		minTarget := minTargetSum
+		// minTarget := sum*minTargetPercent
+		if v >= minTarget && v <= maxTarget {
 			count++
 		}
-		if v <= sumTarg {
+		if v <= maxTarget {
 			// if v <= 8_500 {
 			continue
 		}
@@ -63,12 +66,12 @@ func pr(rep *Report, terminal bool) string {
 	})
 
 	sb.WriteString(
-		fmt.Sprintf("target: %s (%.2f%%)\ncount: %d\nmax target: %s (%.2f%%)\n",
-			p.Sprintf("%05.f", rep.Sum*minTarget),
-			minTarget*100,
+		fmt.Sprintf("min target: %s (%.2f%%)\ncount: %d\nmax target: %s (%.2f%%)\n",
+			p.Sprintf("%05.f", minTargetSum),
+			minTargetSum/sum*100,
 			count,
-			p.Sprintf("%05.f", sumTarg),
-			maxTarget*100))
+			p.Sprintf("%05.f", maxTarget),
+			maxTarget/sum*100))
 	for _, v := range keys {
 		sb.WriteString(p.Sprintf("%s %s \n", p.Sprintf("%05.f", rep.Values[v]), v))
 	}
@@ -83,16 +86,16 @@ func pr(rep *Report, terminal bool) string {
 		sb.WriteString(fmt.Sprintf("%3.0fq c=%d(%3d)  %s  %0.2f%%",
 			q, c+1, int(l)-c-1, p.Sprintf("%6.f", values[c]), proc*100.0))
 
-		if proc >= maxTarget+0.0001 {
+		if values[c] >= maxTarget {
 			if terminal {
 				sb.WriteString("\033[31m")
 			}
-			sb.WriteString(fmt.Sprintf(" > %0.1f%%", maxTarget*100))
-			// } else if proc >= minTarget+0.0001 {
+			sb.WriteString(fmt.Sprintf(" > %0.1f%%", maxTarget/sum*100))
+			// } else if proc >= minTargetPercent+0.0001 {
 			// 	if terminal {
 			// 		sb.WriteString("\033[31m")
 			// 	}
-			// 	sb.WriteString(fmt.Sprintf(" > %0.1f%%", minTarget*100))
+			// 	sb.WriteString(fmt.Sprintf(" > %0.1f%%", minTargetPercent*100))
 		}
 		if terminal {
 			sb.WriteString("\033[0m")
@@ -112,7 +115,7 @@ func pr(rep *Report, terminal bool) string {
 		panic(err)
 	}
 	if max == 0 {
-		max = int(rep.Sum * minTarget)
+		max = int(minTargetSum)
 	}
 	sb.WriteString(fmt.Sprintf("max invest sum: %s\n",
 		p.Sprintf("%d", max)))
@@ -162,6 +165,7 @@ func pr(rep *Report, terminal bool) string {
 		expl := ""
 		if max-int(sum) > int(0.75*float64(max)) &&
 			req.Term < 390 &&
+			req.InterestRate < 0.3 &&
 			req.CollectedPercentage < 100 &&
 			req.Rating != "CCC" &&
 			req.Amount.Float64 <= 2_500_000 {
@@ -175,6 +179,12 @@ func pr(rep *Report, terminal bool) string {
 		}
 		if buy > 0 && req.CollectedPercentage > 60 && req.CollectedPercentage < 100 {
 			expl += "|"
+			if req.CollectedPercentage > 80 {
+				expl += "|"
+			}
+			if req.CollectedPercentage > 90 {
+				expl += "|"
+			}
 		}
 		if s != "" {
 			t.AppendRows([]table.Row{
@@ -233,31 +243,6 @@ func index(values map[string]float64) float64 {
 		s += v / sum * v / sum
 	}
 	return s
-}
-
-func muchBuy(req Request, max, sum float64) float64 {
-	can := max - sum
-	buy := 0.
-	// if invested + reserved more than max sum
-	// or already collected
-	if can <= 0 || req.CollectedPercentage >= 100 {
-		return .0
-	}
-
-	// if more than a year
-	if req.Term >= 390 {
-		// if sum < 1/4 of max (1500)
-		if sum < float64(max/4) {
-			buy = math.Min(float64(can), float64(max/4))
-		}
-		return buy
-	}
-
-	// if sum < 1/2 of max (3000)
-	if sum < float64(max/2) {
-		buy = float64(max/2) - sum
-	}
-	return buy
 }
 
 func round(buy float64) int {

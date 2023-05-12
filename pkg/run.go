@@ -16,11 +16,13 @@ import (
 
 const (
 	// target    = 0.0027
-	minTarget = 0.00206
-	maxTarget = 0.003
-	okCode    = 200
-	percent   = 100
-	timeout   = 10 * time.Second
+	minTargetPercent = 0.00206
+	minTargetSum     = 6001.
+	maxTargetPercent = 0.003
+	maxTargetSum     = 9001.
+	okCode           = 200
+	percent          = 100
+	timeout          = 10 * time.Second
 )
 
 // ErrGetJSON is an error getting json

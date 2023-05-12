@@ -3,6 +3,8 @@ MODE ?= stat
 .PHONY: run
 run:
 	go run -race cmd/cli/main.go -m ${MODE}
+run_alt:
+	go run -race -tags alt cmd/cli/main.go -m ${MODE}
 expect:
 	go run -race cmd/cli/main.go -m expect
 csv:
