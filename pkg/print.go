@@ -20,7 +20,7 @@ const (
 	maxInvest = 0
 )
 
-func pr(rep *Report, terminal bool) string {
+func pr(rep *Report, terminal, cli bool) string {
 	var sb strings.Builder
 	if !terminal {
 		// sb.WriteString("<pre>\n")
@@ -103,6 +103,9 @@ func pr(rep *Report, terminal bool) string {
 		sb.WriteString("\n")
 	}
 	sort.Slice(rep.Requests, func(i, j int) bool {
+		if rep.Requests[i].InterestRate == rep.Requests[j].InterestRate {
+			return rep.Requests[i].Company < rep.Requests[j].Company
+		}
 		return rep.Requests[i].InterestRate > rep.Requests[j].InterestRate
 	})
 
@@ -123,12 +126,13 @@ func pr(rep *Report, terminal bool) string {
 - need to cancel reserved
 | more than 60% collected
 `)
+	totalBuy := 0
 
 	t := table.NewWriter()
 	t.SetOutputMirror(&sb)
 	t.AppendHeader(table.Row{"!", "Buy", "Reserved", "Company", "Percent", "Action", "Sum", "Collected", "Total", "Days", "Rating"})
 	for _, req := range rep.Requests {
-		if req.InterestRate < minPercent {
+		if req.InterestRate < minPercent && req.CollectedPercentage < 80 {
 			continue
 		}
 		if req.CollectedPercentage >= 100 {
@@ -162,6 +166,7 @@ func pr(rep *Report, terminal bool) string {
 			s = "sell"
 		}
 		buy := round(muchBuy(req, float64(max), sum))
+		totalBuy += buy
 		expl := ""
 		if max-int(sum) > int(0.75*float64(max)) &&
 			req.Term < 390 &&
@@ -169,7 +174,7 @@ func pr(rep *Report, terminal bool) string {
 			req.CollectedPercentage < 100 &&
 			req.Rating != "CCC" &&
 			req.Amount.Float64 <= 2_500_000 {
-			expl = "!"
+			expl = "$"
 		}
 		if max-int(sum) < int(0.5*float64(max)) {
 			expl = "✓"
@@ -178,12 +183,15 @@ func pr(rep *Report, terminal bool) string {
 			}
 		}
 		if buy > 0 && req.CollectedPercentage > 60 && req.CollectedPercentage < 100 {
-			expl += "|"
+			expl += "░"
+			if req.CollectedPercentage > 70 {
+				expl += "▒"
+			}
 			if req.CollectedPercentage > 80 {
-				expl += "|"
+				expl += "▓"
 			}
 			if req.CollectedPercentage > 90 {
-				expl += "|"
+				expl += "█"
 			}
 		}
 		if s != "" {
@@ -197,7 +205,14 @@ func pr(rep *Report, terminal bool) string {
 			})
 		}
 	}
-	t.Render()
+	t.AppendSeparator()
+	t.AppendRows([]table.Row{
+		{"", totalBuy},
+	})
+	// t.SetStyle(table.StyleColoredBright)
+	if !cli {
+		t.Render()
+	}
 	if terminal {
 		sb.WriteString("\033[0m")
 	}

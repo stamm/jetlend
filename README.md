@@ -11,6 +11,21 @@ To run you need:
 
 `make csv` - export transaction to IntelInvest's format. Need to [download all transaction](https://jetlend.ru/invest/v3/notifications), convert from xslx to csv (file transactions-2.csv)
 
+default values:
+
+```
+next target: 0.1%
+target: 0.2%
+max target: 0.3%
+max sum: 6_000
+
+if > 372 days
+    max sum: 6_000 / 4 = 1_500 (0.05%)
+if > 30% days
+    max sum: 6_000 / 6 = 1_000 (0.033%)
+max sum: 6_000 / 2 = 3_000  (0.1%)
+```
+
 
 Also you can setup a telegram bot, in this case you need a server. Bot will daily send stat to your `TG_USER_ID`
 Set up a systemd unit in `/etc/systemd/system/jetlend-bot.service`:

@@ -29,7 +29,7 @@ func main() {
 
 	switch *mode {
 	case "", "stat":
-		msg, err := pkg.Run(ctx, cookies, true)
+		msg, err := pkg.Run(ctx, cookies, true, false)
 		if err != nil {
 			panic(err)
 		}

@@ -40,7 +40,7 @@ func main() {
 		if update.Message.Text != "/start" {
 			var err error
 			cookies := strings.Split(update.Message.Text, ",")
-			reply, err = pkg.Run(context.Background(), cookies, false)
+			reply, err = pkg.Run(context.Background(), cookies, false, true)
 			if err != nil {
 				reply = "Error: " + err.Error()
 				isErr = true
@@ -102,7 +102,7 @@ func send(bot *tgbotapi.BotAPI) {
 	for chatID, sids := range cfg {
 
 		isErr := false
-		reply, err := pkg.Run(ctx, sids, false)
+		reply, err := pkg.Run(ctx, sids, false, true)
 		if err != nil {
 			reply = "Error: " + err.Error()
 			isErr = true

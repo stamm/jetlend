@@ -155,7 +155,7 @@ func requests(ctx context.Context, rep *Report, sid string) error {
 }
 
 // Run make stats
-func Run(ctx context.Context, sids []string, terminal bool) (string, error) {
+func Run(ctx context.Context, sids []string, terminal, cli bool) (string, error) {
 	log.Println("Start")
 	var (
 		rep Report
@@ -183,7 +183,7 @@ func Run(ctx context.Context, sids []string, terminal bool) (string, error) {
 		return "", err
 	}
 
-	return pr(&rep, terminal), nil
+	return pr(&rep, terminal, cli), nil
 }
 
 func getJSON(ctx context.Context, client *http.Client, url, sid string) ([]byte, error) {

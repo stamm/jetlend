@@ -115,3 +115,23 @@ func TestExtractExpectWrong(t *testing.T) {
 	assert.ErrorIs(err, ErrUnmarshal)
 	assert.Nil(expect.Data)
 }
+
+func TestExtractRequests(t *testing.T) {
+	assert := assert.New(t)
+	d := []byte(`
+{"requests":[{"interest_rate":0.3}]}
+`)
+	reqs, err := extractRequests(d)
+	assert.Nil(err)
+	assert.Equal([]Request{{InterestRate: 0.3}}, reqs)
+}
+
+func TestExtractRequestsWrong(t *testing.T) {
+	assert := assert.New(t)
+	d := []byte(`
+{"stat
+`)
+	reqs, err := extractRequests(d)
+	assert.ErrorIs(err, ErrUnmarshal)
+	assert.Len(reqs, 0)
+}
