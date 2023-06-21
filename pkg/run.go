@@ -7,9 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
+
+	"log/slog"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -156,7 +157,7 @@ func requests(ctx context.Context, rep *Report, sid string) error {
 
 // Run make stats
 func Run(ctx context.Context, sids []string, terminal, cli bool) (string, error) {
-	log.Println("Start")
+	slog.Info("Start")
 	var (
 		rep Report
 		g   errgroup.Group

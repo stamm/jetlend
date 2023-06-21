@@ -122,19 +122,30 @@ func pr(rep *Report, terminal, cli bool) string {
 	}
 	sb.WriteString(fmt.Sprintf("max invest sum: %s\n",
 		p.Sprintf("%d", max)))
-	sb.WriteString(`✓ already have enough sum
+	if !cli {
+		sb.WriteString(`✓ already have enough sum
 - need to cancel reserved
 | more than 60% collected
 `)
+	}
 	totalBuy := 0
 
 	t := table.NewWriter()
 	t.SetOutputMirror(&sb)
 	t.AppendHeader(table.Row{"!", "Buy", "Reserved", "Company", "Percent", "Action", "Sum", "Collected", "Total", "Days", "Rating"})
+	separate := true
 	for _, req := range rep.Requests {
+		if req.InterestRate < minPercent {
+			if separate {
+				t.AppendSeparator()
+				separate = false
+			}
+		}
+
 		if req.InterestRate < minPercent && req.CollectedPercentage < 80 {
 			continue
 		}
+
 		if req.CollectedPercentage >= 100 {
 			continue
 		}
@@ -168,19 +179,22 @@ func pr(rep *Report, terminal, cli bool) string {
 		buy := round(muchBuy(req, float64(max), sum))
 		totalBuy += buy
 		expl := ""
-		if max-int(sum) > int(0.75*float64(max)) &&
-			req.Term < 390 &&
-			req.InterestRate < 0.3 &&
-			req.CollectedPercentage < 100 &&
-			req.Rating != "CCC" &&
-			req.Amount.Float64 <= 2_500_000 {
-			expl = "$"
-		}
+		// if max-int(sum) > int(0.75*float64(max)) &&
+		// 	req.Term < 390 &&
+		// 	req.InterestRate < 0.3 &&
+		// 	req.CollectedPercentage < 100 &&
+		// 	req.Rating != "CCC" &&
+		// 	req.Amount.Float64 <= 2_500_000 {
+		// 	expl = "$"
+		// }
 		if max-int(sum) < int(0.5*float64(max)) {
 			expl = "✓"
 			if req.InvestingAmount.Float64 > 0 {
 				expl = "–"
 			}
+		}
+		if req.CollectedPercentage < 85 && req.InvestingAmount.Float64 > 0 {
+			expl = "-"
 		}
 		if buy > 0 && req.CollectedPercentage > 60 && req.CollectedPercentage < 100 {
 			expl += "░"

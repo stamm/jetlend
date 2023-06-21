@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"log/slog"
+
 	"github.com/stamm/jetlend/pkg"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,7 +16,7 @@ import (
 )
 
 func main() {
-	log.Println("Start daemon")
+	slog.Info("Start daemon")
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
 	if err != nil {
 		panic(err)
@@ -23,6 +25,7 @@ func main() {
 	bot.Debug = true
 	cronStart(bot)
 
+	// logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	logger := log.New(os.Stderr, "[tg]: ", log.LstdFlags|log.Lmsgprefix)
 	tgbotapi.SetLogger(logger)
 
