@@ -32,6 +32,7 @@ jobs:
       with:
         coverage-file: coverage.out
         amend: true
+        chart: true
       continue-on-error: true
 
     - name: Mutating
