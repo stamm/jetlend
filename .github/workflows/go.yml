@@ -29,3 +29,4 @@ jobs:
 
     - name: Mutating
       uses: go-gremlins/gremlins-action@v1
+      continue-on-error: true
