@@ -26,3 +26,6 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: Mutating
+      uses: go-gremlins/gremlins-action@v1
