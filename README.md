@@ -1,3 +1,5 @@
+[![Go Coverage](https://github.com/stamm/jetlend/wiki/coverage.svg)](https://raw.githack.com/wiki/stamm/jetlend/coverage.html)
+
 This project is gather personal stats on one page stat from crowdlending platform Jetlend.
 
 To run you need:
