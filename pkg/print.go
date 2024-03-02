@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	minPercent = 0.20
+	minPercentSecondary = 0.23
+	minPercent          = 0.20
 	// maxInvest  = 6_000
 	maxInvest = 0
 )
@@ -54,7 +55,7 @@ func pr(rep *Report, terminal, cli bool) string {
 		if v >= minTarget && v <= maxTarget {
 			count++
 		}
-		if v <= maxTarget {
+		if false && v <= maxTarget/2 {
 			// if v <= 8_500 {
 			continue
 		}
@@ -73,7 +74,9 @@ func pr(rep *Report, terminal, cli bool) string {
 			p.Sprintf("%05.f", maxTarget),
 			maxTarget/sum*100))
 	for _, v := range keys {
-		sb.WriteString(p.Sprintf("%s %s \n", p.Sprintf("%05.f", rep.Values[v]), v))
+		if rep.Values[v] > minTargetSum {
+			sb.WriteString(p.Sprintf("%s %s \n", p.Sprintf("%05.f", rep.Values[v]), v))
+		}
 	}
 	// for _, q := range []int{50, 75, 90, 95, 96, 97, 98, 99, 100} {
 	for _, q := range []float64{50, 75, 90, 95, 99, 100} {
@@ -83,7 +86,7 @@ func pr(rep *Report, terminal, cli bool) string {
 		}
 		proc := values[c] / rep.Sum
 
-		sb.WriteString(fmt.Sprintf("%3.0fq c=%d(%3d)  %s  %0.2f%%",
+		sb.WriteString(fmt.Sprintf("%3.0fq c=%4d(%3d)  %s  %0.2f%%",
 			q, c+1, int(l)-c-1, p.Sprintf("%6.f", values[c]), proc*100.0))
 
 		if values[c] >= maxTarget {
@@ -176,9 +179,10 @@ func pr(rep *Report, terminal, cli bool) string {
 			// }
 			s = "sell"
 		}
-		buy := round(muchBuy(req, float64(max), sum))
+		buyFloat, expl := muchBuy(req, float64(max), sum)
+		buy := round(buyFloat)
 		totalBuy += buy
-		expl := ""
+		// expl := ""
 		// if max-int(sum) > int(0.75*float64(max)) &&
 		// 	req.Term < 390 &&
 		// 	req.InterestRate < 0.3 &&
@@ -187,27 +191,6 @@ func pr(rep *Report, terminal, cli bool) string {
 		// 	req.Amount.Float64 <= 2_500_000 {
 		// 	expl = "$"
 		// }
-		if max-int(sum) < int(0.5*float64(max)) {
-			expl = "✓"
-			if req.InvestingAmount.Float64 > 0 {
-				expl = "–"
-			}
-		}
-		if req.CollectedPercentage < 85 && req.InvestingAmount.Float64 > 0 {
-			expl = "-"
-		}
-		if buy > 0 && req.CollectedPercentage > 60 && req.CollectedPercentage < 100 {
-			expl += "░"
-			if req.CollectedPercentage > 70 {
-				expl += "▒"
-			}
-			if req.CollectedPercentage > 80 {
-				expl += "▓"
-			}
-			if req.CollectedPercentage > 90 {
-				expl += "█"
-			}
-		}
 		if s != "" {
 			t.AppendRows([]table.Row{
 				{expl, buy, req.InvestingAmount.Float64, comp, fmt.Sprintf("%2.1f%%", req.InterestRate*100), s, int(sum),
@@ -237,6 +220,7 @@ func pr(rep *Report, terminal, cli bool) string {
 	}
 	return sb.String()
 }
+
 func prExpect(exp Expect, terminal bool) string {
 	var sb strings.Builder
 	p := message.NewPrinter(language.Russian)

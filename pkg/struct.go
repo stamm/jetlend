@@ -36,13 +36,14 @@ type Balance struct {
 }
 
 type Report struct {
-	Sum      float64
-	Values   map[string]float64
-	Delayed  float64
-	Reserved float64
-	Free     float64
-	Requests []Request
-	Mu       sync.Mutex
+	Sum       float64
+	Values    map[string]float64
+	Delayed   float64
+	Reserved  float64
+	Free      float64
+	Requests  []Request
+	Secondary []Secondary
+	Mu        sync.Mutex
 }
 
 func (r *Report) WithMutex(f func(r *Report)) {
@@ -71,6 +72,25 @@ type Request struct {
 	LoanName            string        `json:"loan_name"`
 	Company             string        `json:"company"`
 	Term                int           `json:"term"`
+}
+
+type Secondaries struct {
+	Data []Secondary `json:"data"`
+}
+type Secondary struct {
+	Company             string        `json:"company"`
+	LoanName            string        `json:"loan_name"`
+	Term                int           `json:"term"`
+	TermLeft            int           `json:"term_left"`
+	InterestRate        float64       `json:"interest_rate"`
+	YTM                 float64       `json:"ytm"`
+	Rating              string        `json:"rating"`
+	Progress            float64       `json:"progress"`
+	PrincipalDebt       float64       `json:"principal_debt"`
+	InvestedCompanyDebt CustomFloat64 `json:"invested_company_debt"`
+	MinPrice            float64       `json:"min_price"`
+	FinancialDiscipline float64       `json:"financial_discipline"`
+	// Amount              CustomFloat64 `json:"amount"`
 }
 
 type CustomFloat64 struct {

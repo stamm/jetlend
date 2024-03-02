@@ -35,23 +35,24 @@ func TestBuy(t *testing.T) {
 			name: "collected",
 			req:  Request{CollectedPercentage: 100},
 			exp:  0.,
+			sum:  0,
 		},
 
 		{
 			name: ">30%",
 			req:  Request{InterestRate: 0.3},
-			exp:  1_000,
+			exp:  1_500,
 		},
 		{
 			name: ">30% half",
 			req:  Request{InterestRate: 0.3},
 			sum:  500,
-			exp:  500,
+			exp:  1_000,
 		},
 		{
-			name: ">30% enoght",
+			name: ">30% enought",
 			req:  Request{InterestRate: 0.3},
-			sum:  1_000,
+			sum:  1_500,
 			exp:  0,
 		},
 
@@ -59,26 +60,27 @@ func TestBuy(t *testing.T) {
 			name: ">=1y",
 			req:  Request{Term: 390},
 			sum:  0,
-			exp:  1_500,
+			exp:  3_000,
 		},
 		{
 			name: ">=1y half",
 			req:  Request{Term: 390},
-			sum:  750,
-			exp:  750,
+			sum:  1_500,
+			exp:  1_500,
 		},
 		{
-			name: ">=1y enoght",
+			name: ">=1y enough",
 			req:  Request{Term: 390},
-			sum:  1_500,
+			sum:  3_000,
 			exp:  0,
 		},
 	}
 
-	max := 6_000.
+	max := 3_000.
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			buy := muchBuy(tc.req, max, tc.sum)
+			buy, _ := muchBuy(tc.req, max, tc.sum)
 			assert.Equal(tc.exp, buy)
 		})
 	}

@@ -1,14 +1,19 @@
 .DEFAULT_GOAL := run
 MODE ?= stat
+RACE ?= -race
 .PHONY: run
 run:
-	go run -race cmd/cli/main.go -m ${MODE}
+	go run ${RACE} cmd/cli/main.go -m ${MODE}
 run_alt:
-	go run -race -tags alt cmd/cli/main.go -m ${MODE}
+	go run ${RACE} -tags alt cmd/cli/main.go -m ${MODE}
 expect:
-	go run -race cmd/cli/main.go -m expect
+	go run ${RACE} cmd/cli/main.go -m expect
 csv:
-	go run -race cmd/csv/main.go > intelinvest_test1.csv
+	go run ${RACE} cmd/csv/main.go > intelinvest_test1.csv
+action:
+	go run ${RACE} cmd/cli/main.go -m what_buy
+secondary:
+	go run ${RACE} cmd/cli/main.go -m secondary
 
 .PHONY: bot
 bot:

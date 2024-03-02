@@ -1,5 +1,3 @@
-//go:build go1.20
-
 package pkg
 
 import (
@@ -77,6 +75,16 @@ func extractRequests(body []byte) ([]Request, error) {
 	}
 
 	return waiting.Requests, nil
+}
+
+func extractSecondary(body []byte) ([]Secondary, error) {
+	var secs Secondaries
+	err := json.Unmarshal(body, &secs)
+	if err != nil {
+		return []Secondary{}, fmt.Errorf("%w secondary: %w", ErrUnmarshal, err)
+	}
+
+	return secs.Data, nil
 }
 
 func companyNorm(s string) string {

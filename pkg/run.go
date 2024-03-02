@@ -1,5 +1,3 @@
-//go:build go1.20
-
 package pkg
 
 import (
@@ -18,13 +16,26 @@ import (
 const (
 	// target    = 0.0027
 	minTargetPercent = 0.00206
-	minTargetSum     = 6001.
+	minTargetSum     = 3_801.
 	maxTargetPercent = 0.003
-	maxTargetSum     = 9001.
+	maxTargetSum     = 6_000.
 	okCode           = 200
 	percent          = 100
 	timeout          = 10 * time.Second
 )
+
+type Config struct {
+	Sids     []string
+	Terminal bool
+}
+type HTTP interface {
+	ExpectAmount(ctx context.Context, cfg Config, days int) (string, error)
+	LoansPorfolio(ctx context.Context, cfg Config) (string, error)
+	Delayed(ctx context.Context, cfg Config) (int, error)
+	Balance(ctx context.Context, cfg Config) (int, int, error)
+	PrimaryMarket(ctx context.Context, cfg Config) (string, error)
+	SecondaryMarket(ctx context.Context, cfg Config) (string, error)
+}
 
 // ErrGetJSON is an error getting json
 var ErrGetJSON = errors.New("can't get json")
@@ -155,6 +166,25 @@ func requests(ctx context.Context, rep *Report, sid string) error {
 	return nil
 }
 
+func secondary(ctx context.Context, rep *Report, sid string) error {
+	body, err := getJSON(ctx, http.DefaultClient, jetURL("exchange/loans?limit=1000&offset=0&sort_dir=desc&sort_field=ytm"), sid)
+	if err != nil {
+		return fmt.Errorf("%w for exchange/loans: %w", ErrGetJSON, err)
+	}
+	// fmt.Printf("body: %s", string(body))
+
+	secondary, err2 := extractSecondary(body)
+	if err2 != nil {
+		return fmt.Errorf("couldn't extract requests for exchange/loans: %w", err2)
+	}
+
+	rep.Mu.Lock()
+	rep.Secondary = secondary
+	rep.Mu.Unlock()
+
+	return nil
+}
+
 // Run make stats
 func Run(ctx context.Context, sids []string, terminal, cli bool) (string, error) {
 	slog.Info("Start")
@@ -177,7 +207,19 @@ func Run(ctx context.Context, sids []string, terminal, cli bool) (string, error)
 	})
 
 	g.Go(func() error {
-		return requests(ctx, &rep, sids[1])
+		sid := sids[0]
+		if len(sids) > 1 {
+			sid = sids[1]
+		}
+		return requests(ctx, &rep, sid)
+	})
+
+	g.Go(func() error {
+		sid := sids[0]
+		if len(sids) > 1 {
+			sid = sids[1]
+		}
+		return secondary(ctx, &rep, sid)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -185,6 +227,64 @@ func Run(ctx context.Context, sids []string, terminal, cli bool) (string, error)
 	}
 
 	return pr(&rep, terminal, cli), nil
+}
+
+// WhatBuy every hour
+func WhatBuy(ctx context.Context, sids []string, terminal, cli bool) (string, bool, error) {
+	slog.Info("Start what to buy")
+	var (
+		rep Report
+		g   errgroup.Group
+	)
+	rep.Values = make(map[string]float64, 0)
+
+	g.Go(func() error {
+		return loans(ctx, &rep, sids)
+	})
+
+	g.Go(func() error {
+		sid := sids[0]
+		if len(sids) > 1 {
+			sid = sids[1]
+		}
+		return requests(ctx, &rep, sid)
+	})
+
+	if err := g.Wait(); err != nil {
+		return "", false, err
+	}
+
+	s, have := needAction(&rep, terminal, cli)
+	return s, have, nil
+}
+
+// SecondaryMarket
+func SecondaryMarket(ctx context.Context, sids []string, terminal, cli bool) (string, bool, error) {
+	slog.Info("Start what to buy")
+	var (
+		rep Report
+		g   errgroup.Group
+	)
+	rep.Values = make(map[string]float64, 0)
+
+	g.Go(func() error {
+		return loans(ctx, &rep, sids)
+	})
+
+	g.Go(func() error {
+		sid := sids[0]
+		if len(sids) > 1 {
+			sid = sids[1]
+		}
+		return secondary(ctx, &rep, sid)
+	})
+
+	if err := g.Wait(); err != nil {
+		return "", false, err
+	}
+
+	s, have := needSecondary(&rep, terminal, cli)
+	return s, have, nil
 }
 
 func getJSON(ctx context.Context, client *http.Client, url, sid string) ([]byte, error) {
@@ -197,6 +297,7 @@ func getJSON(ctx context.Context, client *http.Client, url, sid string) ([]byte,
 	}
 
 	req.Header.Set("Cookie", "sessionid="+sid)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/114.0")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -205,7 +306,8 @@ func getJSON(ctx context.Context, client *http.Client, url, sid string) ([]byte,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != okCode {
-		return []byte{}, fmt.Errorf("response code %d", resp.StatusCode)
+		b, _ := io.ReadAll(resp.Body)
+		return []byte{}, fmt.Errorf("response code %d: %s", resp.StatusCode, string(b))
 	}
 
 	return io.ReadAll(resp.Body)

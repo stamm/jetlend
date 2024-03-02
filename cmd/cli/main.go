@@ -41,6 +41,22 @@ func main() {
 			panic(err)
 		}
 		fmt.Print(msg)
+	case "what_buy":
+		msg, have, err := pkg.WhatBuy(ctx, cookies, true, false)
+		if err != nil {
+			panic(err)
+		}
+		if have {
+			fmt.Print(msg)
+		}
+	case "secondary":
+		msg, have, err := pkg.SecondaryMarket(ctx, cookies, true, false)
+		if err != nil {
+			panic(err)
+		}
+		if have {
+			fmt.Print(msg)
+		}
 	}
 	// stop()
 	// fmt.Printf("ctx done: %s", <-ctx.Done())
