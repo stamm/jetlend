@@ -37,3 +37,8 @@ jobs:
 
     - name: Mutating
       uses: go-gremlins/gremlins-action@v1
+
+    - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.56.2
