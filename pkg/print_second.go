@@ -40,11 +40,14 @@ func needSecondary(rep *Report, terminal, cli bool) (string, bool) {
 	count := 0
 	separate := true
 	for _, sec := range rep.Secondary {
+		if sec.Status == "delayed" {
+			continue
+		}
 
 		if sec.TermLeft < 60 || float64(sec.TermLeft)/float64(sec.Term) < 0.3 {
 			continue
 		}
-		if sec.FinancialDiscipline <= 0.9 {
+		if sec.FinancialDiscipline <= 0.99 {
 			continue
 		}
 

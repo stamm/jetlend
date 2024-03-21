@@ -75,7 +75,8 @@ type Request struct {
 }
 
 type Secondaries struct {
-	Data []Secondary `json:"data"`
+	Data  []Secondary `json:"data"`
+	Total int         `json:"total"`
 }
 type Secondary struct {
 	Company             string        `json:"company"`
@@ -90,6 +91,7 @@ type Secondary struct {
 	InvestedCompanyDebt CustomFloat64 `json:"invested_company_debt"`
 	MinPrice            float64       `json:"min_price"`
 	FinancialDiscipline float64       `json:"financial_discipline"`
+	Status              string        `json:"status"`
 	// Amount              CustomFloat64 `json:"amount"`
 }
 

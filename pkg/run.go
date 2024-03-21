@@ -167,19 +167,34 @@ func requests(ctx context.Context, rep *Report, sid string) error {
 }
 
 func secondary(ctx context.Context, rep *Report, sid string) error {
-	body, err := getJSON(ctx, http.DefaultClient, jetURL("exchange/loans?limit=1000&offset=0&sort_dir=desc&sort_field=ytm"), sid)
-	if err != nil {
-		return fmt.Errorf("%w for exchange/loans: %w", ErrGetJSON, err)
-	}
-	// fmt.Printf("body: %s", string(body))
+	all := make([]Secondary, 0)
 
-	secondary, err2 := extractSecondary(body)
-	if err2 != nil {
-		return fmt.Errorf("couldn't extract requests for exchange/loans: %w", err2)
+	offset := 0
+	limit := 100
+	for {
+		uri := fmt.Sprintf("exchange/loans?limit=%d&offset=%d&sort_dir=desc&sort_field=ytm", limit, offset)
+		slog.Info(uri)
+		body, err := getJSON(ctx, http.DefaultClient, jetURL(
+			uri,
+		), sid)
+		if err != nil {
+			return fmt.Errorf("%w for exchange/loans: %w", ErrGetJSON, err)
+		}
+		// fmt.Printf("body: %s", string(body))
+
+		secondary, total, err2 := extractSecondary(body)
+		if err2 != nil {
+			return fmt.Errorf("couldn't extract requests for exchange/loans: %w", err2)
+		}
+		all = append(all, secondary...)
+		if offset+limit > total || secondary[0].YTM < 0.20 {
+			break
+		}
+		offset += limit
 	}
 
 	rep.Mu.Lock()
-	rep.Secondary = secondary
+	rep.Secondary = all
 	rep.Mu.Unlock()
 
 	return nil
@@ -214,13 +229,13 @@ func Run(ctx context.Context, sids []string, terminal, cli bool) (string, error)
 		return requests(ctx, &rep, sid)
 	})
 
-	g.Go(func() error {
-		sid := sids[0]
-		if len(sids) > 1 {
-			sid = sids[1]
-		}
-		return secondary(ctx, &rep, sid)
-	})
+	// g.Go(func() error {
+	// 	sid := sids[0]
+	// 	if len(sids) > 1 {
+	// 		sid = sids[1]
+	// 	}
+	// 	return secondary(ctx, &rep, sid)
+	// })
 
 	if err := g.Wait(); err != nil {
 		return "", err

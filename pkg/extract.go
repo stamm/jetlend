@@ -77,14 +77,14 @@ func extractRequests(body []byte) ([]Request, error) {
 	return waiting.Requests, nil
 }
 
-func extractSecondary(body []byte) ([]Secondary, error) {
+func extractSecondary(body []byte) ([]Secondary, int, error) {
 	var secs Secondaries
 	err := json.Unmarshal(body, &secs)
 	if err != nil {
-		return []Secondary{}, fmt.Errorf("%w secondary: %w", ErrUnmarshal, err)
+		return []Secondary{}, 0, fmt.Errorf("%w secondary: %w", ErrUnmarshal, err)
 	}
 
-	return secs.Data, nil
+	return secs.Data, secs.Total, nil
 }
 
 func companyNorm(s string) string {
