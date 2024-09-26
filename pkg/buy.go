@@ -61,7 +61,7 @@ func amountBuySecondary(sec Secondary, max, sum float64) (float64, string) {
 	}
 
 	// if more than a year
-	if sec.Term >= 390 {
+	if sec.Term >= 720 {
 		// if sum < 1/4 of max (1500)
 		m := max / 2
 		if sum < m {

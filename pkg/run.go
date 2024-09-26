@@ -16,12 +16,12 @@ import (
 const (
 	// target    = 0.0027
 	minTargetPercent = 0.00206
-	minTargetSum     = 3_801.
+	minTargetSum     = 3_901.
 	maxTargetPercent = 0.003
-	maxTargetSum     = 6_000.
+	maxTargetSum     = 4_001.
 	okCode           = 200
 	percent          = 100
-	timeout          = 10 * time.Second
+	timeout          = 20 * time.Second
 )
 
 type Config struct {
@@ -162,6 +162,7 @@ func requests(ctx context.Context, rep *Report, sid string) error {
 	rep.Mu.Lock()
 	rep.Requests = requests
 	rep.Mu.Unlock()
+	// fmt.Printf("%+v", requests)
 
 	return nil
 }
@@ -187,7 +188,7 @@ func secondary(ctx context.Context, rep *Report, sid string) error {
 			return fmt.Errorf("couldn't extract requests for exchange/loans: %w", err2)
 		}
 		all = append(all, secondary...)
-		if offset+limit > total || secondary[0].YTM < 0.20 {
+		if offset+limit > total || secondary[0].YTM < 0.18 {
 			break
 		}
 		offset += limit
@@ -285,6 +286,14 @@ func SecondaryMarket(ctx context.Context, sids []string, terminal, cli bool) (st
 	g.Go(func() error {
 		return loans(ctx, &rep, sids)
 	})
+
+	// g.Go(func() error {
+	// 	sid := sids[0]
+	// 	if len(sids) > 1 {
+	// 		sid = sids[1]
+	// 	}
+	// 	return requests(ctx, &rep, sid)
+	// })
 
 	g.Go(func() error {
 		sid := sids[0]

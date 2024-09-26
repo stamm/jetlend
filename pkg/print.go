@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	minPercentSecondary = 0.23
-	minPercent          = 0.20
+	// minPercentSecondary = 0.23
+	minPercent = 0.18
 	// maxInvest  = 6_000
 	maxInvest = 0
 )
@@ -48,12 +48,16 @@ func pr(rep *Report, terminal, cli bool) string {
 	// maxTarget := rep.Sum * maxTargetPercent
 	maxTarget := maxTargetSum
 	count := 0
+	countMax := 0
 	keys := make([]string, 0, len(rep.Values))
 	for key, v := range rep.Values {
 		minTarget := minTargetSum
 		// minTarget := sum*minTargetPercent
 		if v >= minTarget && v <= maxTarget {
 			count++
+		}
+		if v > maxTarget {
+			countMax++
 		}
 		if false && v <= maxTarget/2 {
 			// if v <= 8_500 {
@@ -67,26 +71,27 @@ func pr(rep *Report, terminal, cli bool) string {
 	})
 
 	sb.WriteString(
-		fmt.Sprintf("min target: %s (%.2f%%)\ncount: %d\nmax target: %s (%.2f%%)\n",
+		fmt.Sprintf("min target: %s (%.2f%%)\ncount: %d\nmax target: %s (%.2f%%)\ncount :%d\n",
 			p.Sprintf("%05.f", minTargetSum),
 			minTargetSum/sum*100,
 			count,
 			p.Sprintf("%05.f", maxTarget),
-			maxTarget/sum*100))
+			maxTarget/sum*100,
+			countMax))
 	for _, v := range keys {
-		if rep.Values[v] > minTargetSum {
+		if rep.Values[v] > maxTarget {
 			sb.WriteString(p.Sprintf("%s %s \n", p.Sprintf("%05.f", rep.Values[v]), v))
 		}
 	}
 	// for _, q := range []int{50, 75, 90, 95, 96, 97, 98, 99, 100} {
-	for _, q := range []float64{50, 75, 90, 95, 99, 100} {
+	for _, q := range []float64{50, 75, 90, 95, 99, 99.5, 99.9, 100} {
 		c := int(math.Round(l*q/percent)) - 1
 		if c >= int(l) {
 			c = int(l) - 1
 		}
 		proc := values[c] / rep.Sum
 
-		sb.WriteString(fmt.Sprintf("%3.0fq c=%4d(%3d)  %s  %0.2f%%",
+		sb.WriteString(fmt.Sprintf("%5.1fq c=%4d(%4d)  %s  %0.2f%%",
 			q, c+1, int(l)-c-1, p.Sprintf("%6.f", values[c]), proc*100.0))
 
 		if values[c] >= maxTarget {

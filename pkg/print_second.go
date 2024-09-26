@@ -38,7 +38,7 @@ func needSecondary(rep *Report, terminal, cli bool) (string, bool) {
 
 	totalBuy := 0
 	count := 0
-	separate := true
+	// separate := true
 	for _, sec := range rep.Secondary {
 		if sec.Status == "delayed" {
 			continue
@@ -57,10 +57,10 @@ func needSecondary(rep *Report, terminal, cli bool) (string, bool) {
 
 		if sec.YTM < minPercent {
 			continue
-			if separate {
-				sb.WriteString(strings.Repeat("-", 20) + "\n")
-				separate = false
-			}
+			// if separate {
+			// 	sb.WriteString(strings.Repeat("-", 20) + "\n")
+			// 	separate = false
+			// }
 		}
 
 		// log.Printf("sec.InterestRate = %f, sec.CollectedPercentage = %f\n", sec.InterestRate, sec.CollectedPercentage)
@@ -90,7 +90,7 @@ func needSecondary(rep *Report, terminal, cli bool) (string, bool) {
 		// }
 		totalBuy += buy
 		count++
-		sb.WriteString(fmt.Sprintf("%d, %.0f, %.1f, %s, %s, %d, %d, %d months, %s\n",
+		sb.WriteString(fmt.Sprintf("%d, %.0f, %.1f, %s, %s, %d, %d, %d months, %s, %0.2f\n",
 			// expl,
 			buy, sec.PrincipalDebt,
 			sec.MinPrice*100,
@@ -99,6 +99,7 @@ func needSecondary(rep *Report, terminal, cli bool) (string, bool) {
 			int(sum),
 			sec.TermLeft/30, sec.Term/30,
 			sec.Rating,
+			sec.FinancialDiscipline,
 		))
 	}
 	sb.WriteString(fmt.Sprintf("total to buy : %d\n", totalBuy))
